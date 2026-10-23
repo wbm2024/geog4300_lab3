@@ -47,6 +47,19 @@ In the first part of this lab, you'll determine a confidence interval for Washin
 era5_data_Washington<-era5_data |> 
   filter(st_name == "Washington")
 
+era5_data_Washington_summary<-era5_data_Washington |> 
+  summarise(prcp_mean=mean(prcp_m),
+            prcp_sd=sd(prcp_m),
+            observations=n(),
+            se=prcp_sd/sqrt(observations))
+
+z.score_upper=qnorm(0.975)
+z.score_lower=qnorm(0.025)
+
+era5_data_Washington_summary<-era5_data_Washington_summary |> 
+  mutate(error=z.score_upper*se,
+         ci_high=prcp_mean+error,
+         ci_low=prcp_mean-error)
 ```
 
 Using the code provided in class, create a ggplot graphic that visualizes these two confidence intervals. You'll want to use `geom_point` and `geom_linerange` to do so. Use states as the y-axis and mean precipitation as the x axis. Vary the color and position of the dots and lines for the mean/CI by the `time_range` variable. Feel free to also experiment with axis labels/themes to make the graph more appealing and accessible.
@@ -54,7 +67,9 @@ Using the code provided in class, create a ggplot graphic that visualizes these 
 **Task 2** _Create a ggplot graphic as described above to show the confidence intervals for precipitation in Washington for each time range._
 
 ```{r Task3}
-
+ggplot(era5_data_Washington) +
+  geom_linerange(aes(xmin=ci_low,xmax=ci_high,y=reorder(STATE,mex_pct),group=time_range))+
+  geom_point(aes(x=mex_pct,y=STATE))
 ```
 
 **Task 3** _Interpret your table and graph. What do they tell us about the change in Washington's precipitation during this time?_
