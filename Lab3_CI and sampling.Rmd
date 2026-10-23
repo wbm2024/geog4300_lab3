@@ -10,7 +10,7 @@ library(tidyverse)
 
 ## Confidence intervals
 
-**Your name: {Name here}**
+**Your name: William Burgett-Merkel**
 
 **Overview:**
 
