@@ -68,8 +68,8 @@ Using the code provided in class, create a ggplot graphic that visualizes these 
 
 ```{r Task3}
 ggplot(era5_data_Washington) +
-  geom_linerange(aes(xmin=ci_low,xmax=ci_high,y=reorder(STATE,mex_pct),group=time_range))+
-  geom_point(aes(x=mex_pct,y=STATE))
+  geom_linerange(aes(xmin=ci_low,xmax=ci_high,y=reorder(,),group=time_range))+
+  geom_point(aes(x=,y=))
 ```
 
 **Task 3** _Interpret your table and graph. What do they tell us about the change in Washington's precipitation during this time?_
