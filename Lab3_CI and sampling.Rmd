@@ -83,7 +83,7 @@ ggplot(era5_data_Washington_summary) +
 
 **Task 3** _Interpret your table and graph. What do they tell us about the change in Washington's precipitation during this time?_
 
-{Your response here.}
+The table tells us that there was more precipitation on average in 1950 to 1969 than from 2005-2024, but there is a lot of variability in both time frames. The table and graph also show that the precipitation has changed significantly from the first time range (1950-1969) to the second (2005-2024). This is evident on the graph by the confidence intervals not having any overlap between them, meaning there is a significant change in the data. The data tells us the decrease in the mean precipitation from 1950-1969 to 2005-2024 is statistically significant, even though the standard deviation shows that the data itself is highly variable.
 
 # Part 2: Analyzing county data in Washington.
 In part 1, you ran a state level analysis. What if you wanted to identify where populations might be negatively affected by precipitation changes within a state? In this section, you'll look at the changes in precipitation **at county level** in Washington to 
