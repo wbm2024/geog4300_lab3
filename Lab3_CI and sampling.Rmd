@@ -126,7 +126,11 @@ ggplot(era5_data_Washington_summary_county) +
 
 **Task 6**: _Compare the size of the error terms for your county level data to the error terms at state level that you calculated in Task 1. Are they bigger or smaller? Explain why the formula you used for calculating the error terms produced error terms of different sizes. How is this difference visible in your ggplot graphs?_
 
-{Your response here.}
+The error in the county level data is much smaller in general than the state level error. 
+
+The reason why the error for the county level data had generally larger errors than the state data is because it only had 20 observations per county, while the state data had almost 800 observations. The equation that causes this issue is the equation for the standard error (se=prcp_sd/sqrt(observations)). When you have a small number of observations, the denominator remains small and therefore the standard error stays large (dividing by 100 gives a smaller number than dividing by 10). Considering the confidence intervals is just the mean plus or minus the error, a larger error gives us a larger range for the confidence intervals, and therefore a larger visible error.
+
+The difference is visible because the confidence intervals are larger and spread further apart (meaning the low limit of the confidence interval was not close to the upper limit of the confidence interval).
 
 **Task 7**: _Transform the county data from task 4 into wide format so that the means for each time period are in the same row for each county. Then calculate the change in precipitation between the time periods. Join this table to the geopackage file that contains county boundaries and census data, making sure that you only have Washington counties included - use the geopackage `data/acsdata_cty_westreg.gpkg`. Then use `tmap` to map out the difference in precipitation means across the two time periods. Make sure the legend of this map is interpretable._
 
@@ -145,7 +149,6 @@ era5_data_Washington_summary_county_wide<-era5_data_Washington_summary_county |>
 
 era5_data_Washington_summary_county_wide <- era5_data_Washington_summary_county_wide |> 
   mutate(Change_cm = (era5_data_Washington_summary_county_wide$'2005-24' - era5_data_Washington_summary_county_wide$'1950-69')*100)
-  
 
 era5_data_joined <- wa_cty |> 
   left_join(era5_data_Washington_summary_county_wide, by = "cty_name")
@@ -205,8 +208,10 @@ In addition, describe two interesting trends you see in the figure you created.
 
 **Disclosure of assistance:** Besides class materials, what other sources of assistance did you use while completing this lab? These can include input from classmates, relevant material identified through web searches (e.g., Stack Overflow), or assistance from ChatGPT or other AI tools. How did these sources support your own learning in completing this lab?
 
-{Response here.}
+I actually did not use AI or assistance that much outside of class work. I did use AI for task 2 because I wanted an explanation on the formatting of the geom_linerange() tool, specifically how the reorder function worked. I also used AI to help find the best and most efficient way to change the color scheme for task 2 and 5. I did have to use it a couple times because of stupid mistakes like missing a pipe or plus sign (will I ever not make those errors?). Lastly for AI, I used it to help format the figure for task 7. Since we wanted the figure and legend to be as easy to interpret as possible, I used AI to help me. First, I used it to help find the best way to assign a color scheme, then I used it because I did not like how the legend said "-10 - -9" because it looked like I was subtracting values, so I got it to help me make it "-10 to -9", and then eventually "-9 to -10" because going in reverse made less sense. I used AI to reverse the legend because I wanted smaller integers on top and larger ones on the bottom (even though they are negative, I thought this flowed better). I also used AI to get over errors because I could not figure out the order in which I should do task 7. I used it to help set a plan for how I should write my own code, and it guided me by helping me format which steps I should do first.
+
+I did have help from classmates. Grayson and I worked together on the lab as we both wanted to bounce ideas back and forth for task 6 and 7. I had the idea to change the text format for the legend to say "# to #", and he came up with the idea to convert the legend and figure data to centimeters to get whole integers as well as which color scheme was best (we liked how it matches the drought monitor). We also discussed why the formulas gave larger errors to county data. We did also generally discuss the best ways to go about task 7, because we both had errors we were trying to deal with.
 
 **Lab reflection:** How do you feel about the work you did on this lab? Was it easy, moderate, or hard? What are the biggest things you learned by completing it?
 
-{Your response here}
+Honestly, outside of task 7, I thought this lab was much easier than lab 2. It may be because I have a good background in statistics from my time at LSU and because I like math equations, but I did not struggle with this lab much at all. I did like learning how to run statistics in R, and I did use the refresher in my thesis results, so I had a lot of enjoyment covering this. Overall, I feel good about my work on this lab.
