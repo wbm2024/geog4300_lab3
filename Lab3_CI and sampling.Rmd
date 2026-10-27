@@ -131,7 +131,38 @@ ggplot(era5_data_Washington_summary_county) +
 **Task 7**: _Transform the county data from task 4 into wide format so that the means for each time period are in the same row for each county. Then calculate the change in precipitation between the time periods. Join this table to the geopackage file that contains county boundaries and census data, making sure that you only have Washington counties included - use the geopackage `data/acsdata_cty_westreg.gpkg`. Then use `tmap` to map out the difference in precipitation means across the two time periods. Make sure the legend of this map is interpretable._
 
 ```{r Task7}
+library(terra)
+library(sf)
+library(tmap)
 
+wa_cty <- st_read("data/acsdata_cty_westreg.gpkg") %>% 
+  st_transform(4326) %>%
+  filter(st_name == "Washington")
+
+era5_data_Washington_summary_county_wide<-era5_data_Washington_summary_county |> 
+  select(time_range, cty_name, prcp_mean) |> 
+  pivot_wider(names_from=time_range, values_from=prcp_mean)
+
+era5_data_Washington_summary_county_wide <- era5_data_Washington_summary_county_wide |> 
+  mutate(Change_cm = (era5_data_Washington_summary_county_wide$'2005-24' - era5_data_Washington_summary_county_wide$'1950-69')*100)
+  
+
+era5_data_joined <- wa_cty |> 
+  left_join(era5_data_Washington_summary_county_wide, by = "cty_name")
+
+tm_shape(era5_data_joined)+
+  tm_polygons("Change_cm", palette = "-YlOrRd",
+              legend.format = list(text.separator = " to "),
+              title = "Precipitation Change (cm)",
+              textNA = FALSE,
+              legend.reverse = TRUE,
+              labels = c(
+                "-9 to -10",
+                "-7 to -8",
+                "-5 to -6",
+                "-3 to -4",
+                "0 to -2")) +
+  tm_layout(main.title = "Change in Precipitation by County")
 ```
 
 
