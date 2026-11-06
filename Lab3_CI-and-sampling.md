@@ -1,0 +1,426 @@
+Geog 4/6300: Lab 3-Confidence intervals
+================
+
+## Confidence intervals
+
+**Your name: William Burgett-Merkel**
+
+**Overview:**
+
+In this lab, we will create confidence intervals for January
+precipitation in Washington during two time periods: 1950-1969 and
+2005-2024. Using county-level precipitation data from the ERA5 dataset,
+you will estimate statewide precipitation patterns, then examine
+variation and change at the county level. We’ve summed the precipitation
+in January for each county over two twenty year time periods: 1950-1969
+and 2005-2024. You’ll be using those data to create confidence intervals
+at a state and county level.
+
+To load these data, load the csv file, which is included in the data
+folder:
+
+``` r
+era5_data<-read_csv("data/precip_uswest_era5.csv")
+```
+
+This is a long format dataset including county identifiers, county
+population, median household income, and poverty rate. Census figures
+are based on the 2018-22 ACS. The last two columns (year, prcp_m,
+time_range) give the year and total precipitation in meters from the
+ERA5 NetCDF file, and two time ranges (1950-1969 and 2005-2024).
+
+The script used to create this dataframe is also provided in this
+repository (‘lab3_dataprep’), along with rasters of the yearly mean
+total precipitation for Januaries in the two time periods of interest.
+
+For this lab to be marked complete, it must demonstrate the following
+learning standards:
+
+- 11. Create effective data visualizations across multiple chart types
+      (line, scatter, histogram, Q-Q plot), applying appropriate
+      aesthetic choices such as color, grouping, and labeling. (Tasks 2
+      and 5)
+- 12. Produce and interpret confidence interval plots that enable visual
+      comparison of means and uncertainty across groups or time periods.
+      (Tasks 2, 3, 5, and 6)
+- 13. Visualize spatial data using appropriate mapping tools, selecting
+      suitable classification schemes and cartographic elements to
+      support clear communication. (Task 7)
+- 14. Arrange and present tabular results in a readable format
+      appropriate for a technical document or report. (Tasks 1 and 4)
+- 15. Use measures of central tendency and dispersion to describe the
+      variables in tabular datasets (Tasks 1 and 4)
+- 20. Explaining how evidence from a sample supports conclusions about a
+      population while acknowledging sampling variability and
+      uncertainty. (Tasks 3 and 6)
+- 22. Construct and interpret confidence intervals, explaining how
+      factors such as sample size and spatial scale affect the precision
+      of an estimate. (Tasks 1, 3, 4 and 6)
+
+# Part 1: Calculating statewide confidence intervals for Washington’s precipitation
+
+In the first part of this lab, you’ll determine a confidence interval
+for Washington’s precipitation for these two time periods. This can be
+helpful in identifying whether precipitation has changed across the
+state (e.g., whether the two confidence intervals overlap) using the
+county data as your sample.
+
+**Task 1** *Load the data and filter it to just include data for the
+state of Washington. Then create a table showing mean precipitation,
+standard deviation, number of observations (sample size), and
+upper/lower confidence interval bounds for each of the two time periods
+in the `time_range` field. Use `kable` to display the table when you are
+done.*
+
+``` r
+era5_data_Washington<-era5_data |> 
+  filter(st_name == "Washington")
+
+era5_data_Washington_summary<-era5_data_Washington |>
+  group_by(time_range) |> 
+  summarise(prcp_mean=mean(prcp_m),
+            prcp_sd=sd(prcp_m),
+            observations=n(),
+            se=prcp_sd/sqrt(observations))
+
+z.score_upper=qnorm(0.975)
+z.score_lower=qnorm(0.025)
+
+era5_data_Washington_summary<-era5_data_Washington_summary |> 
+  mutate(error=z.score_upper*se,
+         ci_high=prcp_mean+error,
+         ci_low=prcp_mean-error)
+
+kable(era5_data_Washington_summary)
+```
+
+| time_range | prcp_mean | prcp_sd | observations | se | error | ci_high | ci_low |
+|:---|---:|---:|---:|---:|---:|---:|---:|
+| 1950-69 | 0.2032239 | 0.1562948 | 780 | 0.0055963 | 0.0109685 | 0.2141923 | 0.1922554 |
+| 2005-24 | 0.1664626 | 0.1230138 | 780 | 0.0044046 | 0.0086329 | 0.1750955 | 0.1578298 |
+
+Using the code provided in class, create a ggplot graphic that
+visualizes these two confidence intervals. You’ll want to use
+`geom_point` and `geom_linerange` to do so. Use states as the y-axis and
+mean precipitation as the x axis. Vary the color and position of the
+dots and lines for the mean/CI by the `time_range` variable. Feel free
+to also experiment with axis labels/themes to make the graph more
+appealing and accessible.
+
+**Task 2** *Create a ggplot graphic as described above to show the
+confidence intervals for precipitation in Washington for each time
+range.*
+
+``` r
+ggplot(era5_data_Washington_summary) +
+  geom_linerange(aes(xmin=ci_low, xmax=ci_high, y=time_range, group=time_range, color=time_range)) +
+  geom_point(aes(x=prcp_mean,y=time_range)) +
+  labs(
+    title = "Precipitation Change From 1950-1969 to 2005-2024",
+    x = "Precipitation (m)",
+    y = "Time Periods (1950-1969 and 2005-2024)",
+    color = "Precipitation CI")
+```
+
+![](Lab3_CI-and-sampling_files/figure-gfm/Task2-1.png)<!-- -->
+
+**Task 3** *Interpret your table and graph. What do they tell us about
+the change in Washington’s precipitation during this time?*
+
+The table tells us that there was more precipitation on average in 1950
+to 1969 than from 2005-2024, but there is a lot of variability in both
+time frames. The table and graph also show that the precipitation has
+changed significantly from the first time range (1950-1969) to the
+second (2005-2024). This is evident on the graph by the confidence
+intervals not having any overlap between them, meaning there is a
+significant change in the data. The data tells us the decrease in the
+mean precipitation from 1950-1969 to 2005-2024 is statistically
+significant, even though the standard deviation shows that the data
+itself is highly variable.
+
+# Part 2: Analyzing county data in Washington.
+
+In part 1, you ran a state level analysis. What if you wanted to
+identify where populations might be negatively affected by precipitation
+changes within a state? In this section, you’ll look at the changes in
+precipitation **at county level** in Washington to
+
+To start with, adapt your code from step 1 so that you create confidence
+intervals for **counties** instead of states. After creating that
+dataset, create another ggplot graph of those confidence intervals that
+you can compare to the state level data in Task 2 to examine how
+precipitation has changed across counties in Washington.
+
+**Task 4** *Create a summary table for January precipitation in
+Washington counties for both time periods. Use the same approach as in
+Task 1, but calculate statistics for counties rather than the state as a
+whole. Call the head of your table with `kable` when you are done.*
+
+``` r
+era5_data_Washington_summary_county<-era5_data_Washington |>
+  group_by(time_range, cty_name) |> 
+  summarise(prcp_mean=mean(prcp_m),
+            prcp_sd=sd(prcp_m),
+            observations=n(),
+            se=prcp_sd/sqrt(observations))
+```
+
+    ## `summarise()` has regrouped the output.
+    ## ℹ Summaries were computed grouped by time_range and cty_name.
+    ## ℹ Output is grouped by time_range.
+    ## ℹ Use `summarise(.groups = "drop_last")` to silence this message.
+    ## ℹ Use `summarise(.by = c(time_range, cty_name))` for per-operation grouping
+    ##   (`?dplyr::dplyr_by`) instead.
+
+``` r
+z.score_upper=qnorm(0.975)
+z.score_lower=qnorm(0.025)
+
+era5_data_Washington_summary_county<-era5_data_Washington_summary_county |> 
+  mutate(error=z.score_upper*se,
+         ci_high=prcp_mean+error,
+         ci_low=prcp_mean-error)
+
+kable(head(era5_data_Washington_summary_county))
+```
+
+| time_range | cty_name | prcp_mean | prcp_sd | observations | se | error | ci_high | ci_low |
+|:---|:---|---:|---:|---:|---:|---:|---:|---:|
+| 1950-69 | Adams County, Washington | 0.0561916 | 0.0275746 | 20 | 0.0061659 | 0.0120849 | 0.0682765 | 0.0441067 |
+| 1950-69 | Asotin County, Washington | 0.0917109 | 0.0412774 | 20 | 0.0092299 | 0.0180903 | 0.1098012 | 0.0736206 |
+| 1950-69 | Benton County, Washington | 0.0439175 | 0.0199657 | 20 | 0.0044645 | 0.0087502 | 0.0526677 | 0.0351673 |
+| 1950-69 | Chelan County, Washington | 0.2184237 | 0.0983827 | 20 | 0.0219991 | 0.0431173 | 0.2615410 | 0.1753063 |
+| 1950-69 | Clallam County, Washington | 0.3252100 | 0.1331571 | 20 | 0.0297748 | 0.0583576 | 0.3835676 | 0.2668524 |
+| 1950-69 | Clark County, Washington | 0.3545254 | 0.1621728 | 20 | 0.0362629 | 0.0710741 | 0.4255995 | 0.2834514 |
+
+**Task 5** *Visualize the confidence intervals for the county-level data
+you generated in task 4, using the same style as you did for Task 2
+above. For an optional extra challenge, visually highlight the counties
+where the confidence intervals between time periods do NOT overlap.*
+
+``` r
+ggplot(era5_data_Washington_summary_county) + 
+  geom_linerange(aes(xmin=ci_low, xmax=ci_high, y=reorder(cty_name, prcp_mean), group=time_range, color=time_range)) +
+  geom_point(aes(x=prcp_mean,y=cty_name)) +
+  labs(
+    title = "Precipitation Change From 1950-1969 to 2005-2024",
+    x = "Precipitation (m)",
+    y = "Counties in Washington",
+    color = "Precipitation CI")
+```
+
+![](Lab3_CI-and-sampling_files/figure-gfm/Task5-1.png)<!-- -->
+
+**Task 6**: *Compare the size of the error terms for your county level
+data to the error terms at state level that you calculated in Task 1.
+Are they bigger or smaller? Explain why the formula you used for
+calculating the error terms produced error terms of different sizes. How
+is this difference visible in your ggplot graphs?*
+
+The error in the county level data is much smaller in general than the
+state level error.
+
+The reason why the error for the county level data had generally larger
+errors than the state data is because it only had 20 observations per
+county, while the state data had almost 800 observations. The equation
+that causes this issue is the equation for the standard error
+(se=prcp_sd/sqrt(observations)). When you have a small number of
+observations, the denominator remains small and therefore the standard
+error stays large (dividing by 100 gives a smaller number than dividing
+by 10). Considering the confidence intervals is just the mean plus or
+minus the error, a larger error gives us a larger range for the
+confidence intervals, and therefore a larger visible error.
+
+The difference is visible because the confidence intervals are larger
+and spread further apart (meaning the low limit of the confidence
+interval was not close to the upper limit of the confidence interval).
+
+**Task 7**: *Transform the county data from task 4 into wide format so
+that the means for each time period are in the same row for each county.
+Then calculate the change in precipitation between the time periods.
+Join this table to the geopackage file that contains county boundaries
+and census data, making sure that you only have Washington counties
+included - use the geopackage `data/acsdata_cty_westreg.gpkg`. Then use
+`tmap` to map out the difference in precipitation means across the two
+time periods. Make sure the legend of this map is interpretable.*
+
+``` r
+library(terra)
+```
+
+    ## terra 1.9.46
+
+    ## 
+    ## Attaching package: 'terra'
+
+    ## The following object is masked from 'package:knitr':
+    ## 
+    ##     spin
+
+    ## The following object is masked from 'package:tidyr':
+    ## 
+    ##     extract
+
+``` r
+library(sf)
+```
+
+    ## Linking to GEOS 3.14.1, GDAL 3.12.1, PROJ 9.7.1; sf_use_s2() is TRUE
+
+``` r
+library(tmap)
+
+wa_cty <- st_read("data/acsdata_cty_westreg.gpkg") %>% 
+  st_transform(4326) %>%
+  filter(st_name == "Washington")
+```
+
+    ## Reading layer `acsdata_cty_westreg' from data source 
+    ##   `C:\Users\wbm11\OneDrive\Documents\GitHub\geog4300_lab3\data\acsdata_cty_westreg.gpkg' 
+    ##   using driver `GPKG'
+    ## Simple feature collection with 414 features and 8 fields
+    ## Geometry type: MULTIPOLYGON
+    ## Dimension:     XY
+    ## Bounding box:  xmin: -124.7322 ymin: 31.33223 xmax: -102.0416 ymax: 49.00237
+    ## Geodetic CRS:  WGS 84
+
+``` r
+era5_data_Washington_summary_county_wide<-era5_data_Washington_summary_county |> 
+  select(time_range, cty_name, prcp_mean) |> 
+  pivot_wider(names_from=time_range, values_from=prcp_mean)
+
+era5_data_Washington_summary_county_wide <- era5_data_Washington_summary_county_wide |> 
+  mutate(Change_cm = (era5_data_Washington_summary_county_wide$'2005-24' - era5_data_Washington_summary_county_wide$'1950-69')*100)
+
+era5_data_joined <- wa_cty |> 
+  left_join(era5_data_Washington_summary_county_wide, by = "cty_name")
+
+tm_shape(era5_data_joined)+
+  tm_polygons("Change_cm", palette = "-YlOrRd",
+              legend.format = list(text.separator = " to "),
+              title = "Precipitation Change (cm)",
+              textNA = FALSE,
+              legend.reverse = TRUE,
+              labels = c(
+                "-9 to -10",
+                "-7 to -8",
+                "-5 to -6",
+                "-3 to -4",
+                "0 to -2")) +
+  tm_layout(main.title = "Change in Precipitation by County")
+```
+
+    ## 
+
+    ## ── tmap v3 code detected ───────────────────────────────────────────────────────
+
+    ## [v3->v4] `tm_tm_polygons()`: migrate the argument(s) related to the scale of
+    ## the map variable `fill` namely 'palette' (rename to 'values'), 'labels',
+    ## 'textNA' (rename to 'label.na'), 'legend.format' (rename to 'label.format') to
+    ## fill.scale = tm_scale(<HERE>).
+    ## ℹ For small multiples, specify a 'tm_scale_' for each multiple, and put them in
+    ##   a list: 'fill.scale = list(<scale1>, <scale2>, ...)'
+    ## [v3->v4] `tm_polygons()`: migrate the argument(s) related to the legend of the
+    ## map variable `fill` namely 'title', 'legend.reverse' (rename to 'reverse'),
+    ## 'legend.format' (rename to 'format') to 'fill.legend = tm_legend(<HERE>)'
+    ## [v3->v4] `tm_layout()`: use `tm_title()` instead of `tm_layout(main.title = )`
+    ## Multiple palettes called "yl_or_rd" found: "brewer.yl_or_rd", "matplotlib.yl_or_rd". The first one, "brewer.yl_or_rd", is returned.
+    ## 
+    ## [cols4all] color palettes: use palettes from the R package cols4all. Run
+    ## `cols4all::c4a_gui()` to explore them. The old palette name "-YlOrRd" is named
+    ## "yl_or_rd" (in long format "brewer.yl_or_rd")
+
+![](Lab3_CI-and-sampling_files/figure-gfm/Task7-1.png)<!-- -->
+
+# Optional challenge section: Interpreting the implications of precipitation changes
+
+Now that you’ve calculated these means and confidence intervals, let’s
+identify who might be most affected by changes in precipitation. To see
+who is affected, create a dummy variable that flags any counties with a
+decline of 5 centimeters or more (0.05 meters) with a 1, labeling all
+other counties with a 0. Use group_by and summarise to do the following:
+
+- Count the total population in each of these two county groups.
+- Calculate the mean value for median income and poverty rate in these
+  two groups.
+
+**Task 8** *Create a dummy variable for counties with a change of 0.05
+meters or more between the time periods. Calculate how many people
+currently live in these counties along with the mean value of median
+income (medinc) and poverty rate (pov_pop_pct) for those areas.*
+
+**Task 9** *Create a one paragraph summary of your results from tasks 7
+and 8. What do you learn about how precipitation has changed in the last
+70 years across the state of Washington? How would you describe the
+population affected by large drops in precipitation based on your
+results?*
+
+{Your response here.}
+
+Small multiples or multi-panel maps are often a helpful way to show
+change over time. See this page for more information about how these are
+created in `tmap`:
+
+- <https://r-tmap.github.io/tmap/articles/basics_facets>
+
+Using these tools, create a small multiples map of your precipitation
+data for counties in a state of your choice for all 40 years in these
+two time periods. This means you will have one figure with 40 individual
+maps, all of the same state in different years. These maps should allow
+easy comparison across years and should be clearly labeled so that they
+could be interpreted by someone with no knowledge of this assignment.
+
+In addition, describe two interesting trends you see in the figure you
+created.
+
+{Your response here.}
+
+# Final submission stuff
+
+**Disclosure of assistance:** Besides class materials, what other
+sources of assistance did you use while completing this lab? These can
+include input from classmates, relevant material identified through web
+searches (e.g., Stack Overflow), or assistance from ChatGPT or other AI
+tools. How did these sources support your own learning in completing
+this lab?
+
+I actually did not use AI or assistance that much outside of class work.
+I did use AI for task 2 because I wanted an explanation on the
+formatting of the geom_linerange() tool, specifically how the reorder
+function worked. I also used AI to help find the best and most efficient
+way to change the color scheme for task 2 and 5. I did have to use it a
+couple times because of stupid mistakes like missing a pipe or plus sign
+(will I ever not make those errors?). Lastly for AI, I used it to help
+format the figure for task 7. Since we wanted the figure and legend to
+be as easy to interpret as possible, I used AI to help me. First, I used
+it to help find the best way to assign a color scheme, then I used it
+because I did not like how the legend said “-10 - -9” because it looked
+like I was subtracting values, so I got it to help me make it “-10 to
+-9”, and then eventually “-9 to -10” because going in reverse made less
+sense. I used AI to reverse the legend because I wanted smaller integers
+on top and larger ones on the bottom (even though they are negative, I
+thought this flowed better). I also used AI to get over errors because I
+could not figure out the order in which I should do task 7. I used it to
+help set a plan for how I should write my own code, and it guided me by
+helping me format which steps I should do first.
+
+I did have help from classmates. Grayson and I worked together on the
+lab as we both wanted to bounce ideas back and forth for task 6 and 7. I
+had the idea to change the text format for the legend to say “\# to \#”,
+and he came up with the idea to convert the legend and figure data to
+centimeters to get whole integers as well as which color scheme was best
+(we liked how it matches the drought monitor). We also discussed why the
+formulas gave larger errors to county data. We did also generally
+discuss the best ways to go about task 7, because we both had errors we
+were trying to deal with.
+
+**Lab reflection:** How do you feel about the work you did on this lab?
+Was it easy, moderate, or hard? What are the biggest things you learned
+by completing it?
+
+Honestly, outside of task 7, I thought this lab was much easier than lab
+2. It may be because I have a good background in statistics from my time
+at LSU and because I like math equations, but I did not struggle with
+this lab much at all. I did like learning how to run statistics in R,
+and I did use the refresher in my thesis results, so I had a lot of
+enjoyment covering this. Overall, I feel good about my work on this lab.
